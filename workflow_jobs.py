@@ -9,7 +9,7 @@ from typing import Any
 
 from create_section import create_section
 from market_research import generate_market_research, translate_market_research_to_hebrew
-from split_doc import split_doc_to_sections
+from split_doc import split_doc_to_sections, strip_image_data
 from summary_workflow import summarize_section
 from workflow_store import BaseWorkflowStore
 
@@ -82,7 +82,7 @@ def create_workflow(
             "user_goal": input_payload["user_goal"],
         }
         manifest["phase"] = "research"
-        _append_event(manifest, "Market research workflow created")
+        _append_event(manifest, "תהליך מחקר שוק נוצר")
     elif workflow_type == "section_generation":
         sections = input_payload["sections"]
         manifest["input"] = {
@@ -93,7 +93,7 @@ def create_workflow(
         manifest["phase"] = "generate_sections"
         manifest["total_sections"] = len(sections)
         store.write_json(workflow_id, "artifacts/sections/section_rows.json", sections)
-        _append_event(manifest, f"Section generation workflow created for {len(sections)} sections")
+        _append_event(manifest, f"תהליך יצירת סעיפים נוצר עבור {len(sections)} סעיפים")
     elif workflow_type == "single_section":
         section = {
             "sectionTitle": input_payload["chapter_title"],
@@ -109,7 +109,7 @@ def create_workflow(
         manifest["phase"] = "generate_sections"
         manifest["total_sections"] = 1
         store.write_json(workflow_id, "artifacts/sections/section_rows.json", [section])
-        _append_event(manifest, f"Section generation workflow created for {section['sectionTitle']}")
+        _append_event(manifest, f"תהליך יצירת סעיף נוצר עבור {section['sectionTitle']}")
     else:
         raise ValueError(f"Unsupported workflow type: {workflow_type}")
 
@@ -226,8 +226,8 @@ def _advance_improve(store: BaseWorkflowStore, manifest: dict[str, Any]) -> None
         table.append(
             {
                 "section_title": section_title,
-                "original_text": section.get("text", ""),
-                "summary": result.get("summary", ""),
+                "original_text": strip_image_data(section.get("text", "")),
+                "summary": strip_image_data(result.get("summary", "")),
             }
         )
         store.write_json(workflow_id, "artifacts/improve/table.json", table)
@@ -260,24 +260,24 @@ def _advance_market_research(store: BaseWorkflowStore, manifest: dict[str, Any])
     user_goal = manifest["input"]["user_goal"]
 
     if manifest["phase"] == "research":
-        _append_event(manifest, "Running market research")
+        _append_event(manifest, "מבצע מחקר שוק...")
         english_markdown = generate_market_research(summary, user_goal)
         store.write_text(workflow_id, "artifacts/market_research/source.md", english_markdown)
         manifest["phase"] = "translate"
-        _append_event(manifest, "Market research collected")
+        _append_event(manifest, "מחקר שוק הושלם, מתרגם לעברית...")
         return
 
     if manifest["phase"] == "translate":
         english_markdown = store.read_text(workflow_id, "artifacts/market_research/source.md")
-        _append_event(manifest, "Translating market research to Hebrew")
+        _append_event(manifest, "מתרגם מחקר שוק לעברית...")
         hebrew_markdown = translate_market_research_to_hebrew(english_markdown)
-        result = {"markdown": hebrew_markdown}
+        result = {"markdown": strip_image_data(hebrew_markdown)}
         store.write_json(workflow_id, "artifacts/market_research/result.json", result)
         store.write_text(workflow_id, "artifacts/market_research/result.md", hebrew_markdown)
         manifest["result_artifact"] = "artifacts/market_research/result.json"
         manifest["phase"] = "completed"
         manifest["status"] = "completed"
-        _append_event(manifest, "Market research completed")
+        _append_event(manifest, "מחקר שוק הושלם")
 
 
 def _advance_section_generation(store: BaseWorkflowStore, manifest: dict[str, Any]) -> None:
@@ -292,12 +292,12 @@ def _advance_section_generation(store: BaseWorkflowStore, manifest: dict[str, An
         manifest["result_artifact"] = "artifacts/sections/result.json"
         manifest["phase"] = "completed"
         manifest["status"] = "completed"
-        _append_event(manifest, "All sections created")
+        _append_event(manifest, "כל הסעיפים נוצרו")
         return
 
     current_row = section_rows[index]
-    section_title = current_row.get("sectionTitle", f"Section {index + 1}")
-    _append_event(manifest, f"Creating section {index + 1}/{total}: {section_title}")
+    section_title = current_row.get("sectionTitle", f"סעיף {index + 1}")
+    _append_event(manifest, f"יוצר סעיף {index + 1}/{total}: {section_title}")
     result = create_section(
         chapter_title=section_title,
         original_text=current_row.get("originalText", ""),
@@ -307,12 +307,12 @@ def _advance_section_generation(store: BaseWorkflowStore, manifest: dict[str, An
 
     section_rows[index] = {
         **current_row,
-        "improvedText": result.get("improved_text", ""),
+        "improvedText": strip_image_data(result.get("improved_text", "")),
         "explanation": result.get("explanation", ""),
     }
     store.write_json(workflow_id, "artifacts/sections/section_rows.json", section_rows)
     manifest["current_section_index"] = index + 1
-    _append_event(manifest, f"Completed section {index + 1}/{total}: {section_title}")
+    _append_event(manifest, f"הושלם סעיף {index + 1}/{total}: {section_title}")
 
     if manifest["current_section_index"] >= total:
         result = {"section_rows": section_rows}
@@ -320,4 +320,4 @@ def _advance_section_generation(store: BaseWorkflowStore, manifest: dict[str, An
         manifest["result_artifact"] = "artifacts/sections/result.json"
         manifest["phase"] = "completed"
         manifest["status"] = "completed"
-        _append_event(manifest, "All sections created")
+        _append_event(manifest, "כל הסעיפים נוצרו")

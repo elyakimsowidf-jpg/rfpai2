@@ -108,6 +108,7 @@ Return JSON only in this exact schema:
 Rules for additions_explanation:
 - If no sections were added, return an empty string: ""
 - If sections were added, explain briefly what was added and why.
+- IMPORTANT: Write the additions_explanation field in Hebrew.
 
 Rules for rendered_new_toc_text:
 - Must be plain text (not JSON).
@@ -116,6 +117,45 @@ Rules for rendered_new_toc_text:
 - Keep line-based TOC presentation (e.g., פרק ..., נספח ...).
 - Do not remove existing sections.
 """
+
+
+def generate_toc_recommendations(
+    document_summary: str,
+    market_research: str,
+    original_toc: List[Dict[str, str]] | None = None,
+) -> str:
+    """Generate a short recommendation based on market research for what to address in the new TOC."""
+    original_toc_text = _format_toc(original_toc or [])
+
+    prompt = f"""You are an expert in government RFP/SOW document architecture.
+
+Based on the market research findings below, provide a SHORT recommendation (3-5 bullet points)
+about what topics or sections could be valuable to add or strengthen in the updated table of contents.
+
+Original table of contents:
+{original_toc_text}
+
+Document summary:
+{(document_summary or '').strip()}
+
+Market research findings:
+{(market_research or '').strip()}
+
+Instructions:
+- Write your response in Hebrew.
+- Keep it concise: 3-5 short bullet points maximum.
+- Focus on actionable insights from the market research that could improve the document structure.
+- Each bullet should mention a specific topic/area and briefly why it matters.
+- Do NOT return JSON. Return plain text with bullet points (use - or * for bullets).
+- Do NOT repeat what already exists in the TOC. Focus on gaps and opportunities.
+"""
+
+    response = client.models.generate_content(
+        model="gemini-2.0-flash",
+        contents=prompt,
+    )
+
+    return (response.text or "").strip()
 
 
 def generate_new_table_of_contents(

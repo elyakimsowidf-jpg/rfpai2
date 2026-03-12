@@ -13,6 +13,7 @@ _MODEL = "gemini-3-flash-preview"
 _SYSTEM_TEMPLATE = """You are an expert document editor assistant for RFP (Request for Proposal) documents.
 You are helping a user refine a specific section. You may ONLY suggest changes to the "Improved Text" field.
 The original text must never be altered.
+IMPORTANT: Always respond in Hebrew unless the user explicitly writes in English.
 
 --- CURRENT SECTION ---
 Section Title: {section_title}

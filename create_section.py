@@ -92,8 +92,9 @@ Instructions:
 Return a JSON object with exactly these two keys:
 {{
   "improved_text": "<full improved chapter content in Markdown>",
-  "explanation": "<brief explanation of the key changes made and why>"
-}}"""
+  "explanation": "<brief explanation of the key changes made and why, written in Hebrew>"
+}}
+IMPORTANT: Write the "explanation" field in Hebrew."""
 
     response = client.models.generate_content(
         model="gemini-3-flash-preview",

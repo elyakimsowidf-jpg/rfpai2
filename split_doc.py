@@ -3,6 +3,7 @@ from __future__ import annotations
 from datetime import datetime
 import json
 import re
+import struct
 import unicodedata
 from typing import Dict, List
 
@@ -31,10 +32,58 @@ def _persist_artifact(artifact_writer, filename: str, content: str) -> None:
         artifact_writer(filename, content)
 
 
+def _extract_text_from_doc(doc_path: str) -> str:
+    """Extract text from an old-format .doc (OLE) file using olefile."""
+    import olefile
+
+    ole = olefile.OleFileIO(doc_path)
+    try:
+        data = ole.openstream("WordDocument").read()
+    finally:
+        ole.close()
+
+    chars: list[str] = []
+    for i in range(0, len(data) - 1, 2):
+        code = struct.unpack_from("<H", data, i)[0]
+        # Skip surrogates (0xD800-0xDFFF) and private use / invalid codepoints
+        if 0xD800 <= code <= 0xDFFF:
+            continue
+        if 0x20 <= code < 0xFFFE or code in (0x0A, 0x0D, 0x09):
+            chars.append(chr(code))
+        else:
+            if chars and chars[-1] != "\n":
+                chars.append("\n")
+
+    raw = "".join(chars)
+
+    # Filter out garbage lines (very short, non-Hebrew/ASCII)
+    hebrew_range = range(0x0590, 0x05FF + 1)
+    cleaned_lines: list[str] = []
+    for line in raw.split("\n"):
+        stripped = line.strip()
+        if not stripped:
+            cleaned_lines.append("")
+            continue
+        # Keep line only if it contains Hebrew or enough ASCII letters
+        has_hebrew = any(ord(c) in hebrew_range for c in stripped)
+        has_latin = sum(c.isascii() and c.isalpha() for c in stripped) > 2
+        if has_hebrew or has_latin or len(stripped) > 10:
+            cleaned_lines.append(stripped)
+
+    return "\n".join(cleaned_lines).strip()
+
+
 def split_doc_to_chunks(doc_path: str, artifact_writer=None) -> List[Dict]:
-    md = MarkItDown(enable_plugins=False)
-    result = md.convert(doc_path)
-    text = result.text_content
+    try:
+        md = MarkItDown(enable_plugins=False)
+        result = md.convert(doc_path)
+        text = strip_image_data(result.text_content)
+    except Exception:
+        # Fallback: try reading old .doc binary format
+        if doc_path.lower().endswith(".doc"):
+            text = _extract_text_from_doc(doc_path)
+        else:
+            raise
 
     _persist_artifact(artifact_writer, "output.md", text)
 
@@ -61,6 +110,17 @@ def extract_json_array(text: str) -> List[Dict]:
             return data
 
     raise ValueError(f"Could not parse JSON array from model response:\n{text}")
+
+
+def strip_image_data(text: str) -> str:
+    """Remove base64 image data and other unreadable binary strings from text."""
+    # Remove data:image/... base64 strings (inline images)
+    text = re.sub(r'data:image/[^;]+;base64,[A-Za-z0-9+/=\s]{20,}', '[תמונה]', text)
+    # Remove standalone long base64-like blocks (40+ chars of base64 alphabet)
+    text = re.sub(r'(?<!\w)[A-Za-z0-9+/=]{40,}(?!\w)', '[תמונה]', text)
+    # Remove markdown image references with long unreadable alt text or data URIs
+    text = re.sub(r'!\[[^\]]{0,200}\]\(data:[^)]+\)', '[תמונה]', text)
+    return text
 
 
 def normalize_text(s: str) -> str:
@@ -155,7 +215,7 @@ Text:
 
 def build_review_lines(left_text: str, toc: List[Dict], artifact_writer=None) -> List[Dict]:
     cleaned_titles = [clean_for_match(item["title"]) for item in toc]
-    max_line_len = max(len(title) for title in cleaned_titles) + 15
+    max_line_len = (max(len(title) for title in cleaned_titles) + 15) if cleaned_titles else 100
 
     raw_lines = left_text.split("\n")
     cleaned_lines = []
@@ -313,6 +373,16 @@ def split_doc_to_sections(doc_path, artifact_writer=None):
     toc_text = chunks[0]["text"]
     toc = extract_toc_with_llm(toc_text)
     left_text = "\n\n".join(section["text"] for section in chunks[1:])
+
+    if not toc:
+        # No TOC items found – treat the whole document as a single section
+        merged_sections = [{"section_title": "תוכן עניינים", "text": toc_text}]
+        if left_text.strip():
+            merged_sections.append({"section_title": "מסמך", "text": left_text})
+        _persist_artifact(artifact_writer, "toc.json", json.dumps(toc, ensure_ascii=False, indent=2))
+        _persist_artifact(artifact_writer, "toc_and_all_sections.md", _sections_to_markdown(merged_sections))
+        return merged_sections
+
     review_lines = build_review_lines(left_text, toc, artifact_writer=artifact_writer)
     review_lines_text = "\n".join(f"{item['line_index']}: {item['cleaned_line']}" for item in review_lines)
     title_lines = find_title_lines_with_llm(toc, review_lines_text)

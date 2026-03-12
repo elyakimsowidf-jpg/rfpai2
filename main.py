@@ -1,19 +1,25 @@
+import os
+from dotenv import load_dotenv
+
+# Load .env BEFORE any imports that create genai.Client() at module level
+load_dotenv()
+
+# google-genai SDK reads GOOGLE_API_KEY; always prefer GEMINI_API_KEY from .env
+if os.environ.get("GEMINI_API_KEY"):
+    os.environ["GOOGLE_API_KEY"] = os.environ["GEMINI_API_KEY"]
+
 from flask import Flask, request, jsonify, send_file
 from flask_cors import CORS
 import io
-import os
 import tempfile
-from dotenv import load_dotenv
 from markitdown import MarkItDown
 from markdown_pdf import MarkdownPdf, Section
 from md2docx_python.src.md2docx_python import markdown_to_word
 from market_research import run_market_research
-from table_of_contents import generate_new_table_of_contents
+from table_of_contents import generate_new_table_of_contents, generate_toc_recommendations
 from workflow_jobs import advance_workflow, create_workflow, load_workflow
 from workflow_store import get_workflow_store
 from file_store import get_file_store
-
-load_dotenv()
 
 app = Flask(__name__, static_folder='static', static_url_path='')
 # Enable CORS for the React frontend
@@ -323,6 +329,27 @@ def section_chat_endpoint():
     result = chat_with_section(user_message, selected_row, chat_history)
     return jsonify(result)
 
+
+@app.route('/api/toc-chat', methods=['POST'])
+def toc_chat_endpoint():
+    data = request.json or {}
+    user_message = (data.get('message') or '').strip()
+    current_toc = data.get('current_toc') or []
+    original_toc = data.get('original_toc') or []
+    document_summary = (data.get('document_summary') or '').strip()
+    market_research = (data.get('market_research') or '').strip()
+    chat_history = data.get('chat_history') or []
+
+    if not user_message:
+        return jsonify({"error": "Missing message"}), 400
+
+    from toc_chat import chat_with_toc
+    result = chat_with_toc(
+        user_message, current_toc, original_toc,
+        document_summary, market_research, chat_history,
+    )
+    return jsonify(result)
+
 @app.route('/api/market-research', methods=['POST'])
 def market_research_endpoint():
     data = request.json or {}
@@ -346,6 +373,53 @@ def market_research_endpoint():
         return jsonify(workflow), 202
     except Exception as e:
         return jsonify({"error": f"Failed to run market research: {str(e)}"}), 500
+
+
+@app.route('/api/toc-recommendations', methods=['POST'])
+def toc_recommendations_endpoint():
+    data = request.json or {}
+    summary = (data.get('summary') or '').strip()
+    market_research = (data.get('market_research') or '').strip()
+    original_toc = data.get('original_toc') or []
+
+    if not summary:
+        return jsonify({"error": "Missing summary"}), 400
+    if not market_research:
+        return jsonify({"error": "Missing market_research"}), 400
+
+    try:
+        recommendations = generate_toc_recommendations(
+            document_summary=summary,
+            market_research=market_research,
+            original_toc=original_toc,
+        )
+        return jsonify({"recommendations": recommendations}), 200
+    except Exception as e:
+        return jsonify({"error": f"Failed to generate recommendations: {str(e)}"}), 500
+
+
+@app.route('/api/toc-recommendations-chat', methods=['POST'])
+def toc_recommendations_chat_endpoint():
+    data = request.json or {}
+    user_message = (data.get('message') or '').strip()
+    current_recommendations = (data.get('current_recommendations') or '').strip()
+    original_toc = data.get('original_toc') or []
+    document_summary = (data.get('document_summary') or '').strip()
+    market_research = (data.get('market_research') or '').strip()
+    chat_history = data.get('chat_history') or []
+
+    if not user_message:
+        return jsonify({"error": "Missing message"}), 400
+
+    try:
+        from toc_chat import chat_with_recommendations
+        result = chat_with_recommendations(
+            user_message, current_recommendations, original_toc,
+            document_summary, market_research, chat_history,
+        )
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": f"Failed to chat about recommendations: {str(e)}"}), 500
 
 
 @app.route('/api/table-of-contents', methods=['POST'])
