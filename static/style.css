@@ -41,7 +41,7 @@ body, html {
 
 .system-message {
   background-color: #e2e8f0;
-  padding: 10px;
+  padding: 16px 24px;
   border-radius: 8px;
   font-size: 0.9rem;
 }
@@ -79,6 +79,7 @@ body, html {
   display: flex;
   flex-direction: column;
   overflow-x: hidden;
+  padding-top: 16px;
 }
 
 .tabs {
@@ -110,8 +111,10 @@ body, html {
 .tab-content {
   flex: 1;
   padding: 16px 20px;
-  overflow-y: auto;
-  overflow-x: hidden;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .tab-pane {
@@ -119,12 +122,14 @@ body, html {
   border-radius: 8px;
   padding: 18px 20px;
   box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-  height: 100%;
+  flex: 1;
   display: flex;
   flex-direction: column;
   max-width: 900px;
   margin: 0 auto;
   width: 100%;
+  min-height: 0;
+  overflow: hidden;
 }
 
 .tab-pane h3 {
@@ -134,7 +139,7 @@ body, html {
 .upload-area {
   border: 2px dashed #cbd5e1;
   border-radius: 12px;
-  padding: 36px 24px;
+  padding: 20px 16px;
   text-align: center;
   color: #64748b;
   background-color: #f8fafc;
@@ -188,8 +193,8 @@ body, html {
   background: #fff;
   border: 1px solid #e2e8f0;
   border-radius: 12px;
-  padding: 20px 24px;
-  margin-bottom: 20px;
+  padding: 14px 16px;
+  margin-bottom: 12px;
 }
 
 .upload-section-card h3,
@@ -218,6 +223,11 @@ body, html {
   border-radius: 8px;
   margin-bottom: 8px;
   transition: background-color 0.15s;
+}
+
+.file-list-item.selected {
+  background-color: #f0fdf4;
+  border-color: #86efac;
 }
 
 .file-list-item:hover {
@@ -253,6 +263,29 @@ body, html {
 
 .delete-btn:hover {
   background-color: #fef2f2;
+}
+
+.file-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.select-btn {
+  background: #3b82f6;
+  border: 1px solid #3b82f6;
+  border-radius: 6px;
+  color: #fff;
+  cursor: pointer;
+  padding: 4px 12px;
+  font-size: 0.82rem;
+  font-weight: 600;
+  font-family: inherit;
+  transition: background-color 0.15s;
+}
+
+.select-btn:hover {
+  background-color: #2563eb;
 }
 
 /* Select file dropdown */
@@ -491,6 +524,10 @@ body, html {
   max-width: 860px;
   margin: 0 auto;
   width: 100%;
+  flex: 1;
+  overflow-y: auto;
+  min-height: 0;
+  padding-bottom: 8px;
 }
 
 /* ========== Wizard progress bar ========== */
@@ -514,6 +551,7 @@ body, html {
   align-items: center;
   cursor: pointer;
   gap: 3px;
+  margin: 0 8px;
 }
 
 .wizard-dot {
@@ -574,8 +612,8 @@ body, html {
   flex: 1;
   height: 2px;
   background: #cbd5e1;
-  min-width: 12px;
-  margin: 0 4px;
+  min-width: 20px;
+  margin: 0 8px;
   margin-bottom: 15px;
   transition: background 0.2s;
 }
@@ -589,14 +627,12 @@ body, html {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 0;
+  padding: 12px 20px;
   border-top: 1px solid #e2e8f0;
-  margin-top: auto;
+  margin-top: 0;
   flex-shrink: 0;
-  max-width: 860px;
-  margin-left: auto;
-  margin-right: auto;
   width: 100%;
+  background: #fff;
 }
 
 .wizard-nav button {

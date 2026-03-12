@@ -81,6 +81,10 @@ function App() {
   const [summaryCollapsed, setSummaryCollapsed] = useState(false);
   const [researchCollapsed, setResearchCollapsed] = useState(false);
 
+  // Loading status messages
+  const [loadingStatus, setLoadingStatus] = useState('');
+  const loadingIntervalRef = useRef(null);
+
   const chatEndRef = useRef(null);
 
   // ===================== FETCH HELPERS =====================
@@ -118,6 +122,21 @@ function App() {
   };
 
   const sleep = (ms) => new Promise(r => setTimeout(r, ms));
+
+  const startLoadingMessages = (messages, intervalMs = 3000) => {
+    let idx = 0;
+    setLoadingStatus(messages[0]);
+    if (loadingIntervalRef.current) clearInterval(loadingIntervalRef.current);
+    loadingIntervalRef.current = setInterval(() => {
+      idx = Math.min(idx + 1, messages.length - 1);
+      setLoadingStatus(messages[idx]);
+    }, intervalMs);
+  };
+
+  const stopLoadingMessages = () => {
+    if (loadingIntervalRef.current) { clearInterval(loadingIntervalRef.current); loadingIntervalRef.current = null; }
+    setLoadingStatus('');
+  };
 
   const fetchWorkflowJson = async (url, options = {}) => {
     const response = await fetch(url, options);
@@ -254,18 +273,30 @@ function App() {
     setIsMarketResearchLoading(true); setMarketResearchError(''); setMarketResearchMarkdown('');
     setTocRecommendations(''); setRecsError('');
     setMarketResearchWorkflowId('');
+    startLoadingMessages([
+      '\u05D0\u05D5\u05E1\u05E3 \u05DE\u05D9\u05D3\u05E2 \u05E2\u05DC \u05D4\u05EA\u05D7\u05D5\u05DD...',
+      '\u05DE\u05E0\u05EA\u05D7 \u05DE\u05D2\u05DE\u05D5\u05EA \u05D1\u05E9\u05D5\u05E7...',
+      '\u05DE\u05D6\u05D4\u05D4 \u05DE\u05EA\u05D7\u05E8\u05D9\u05DD \u05D5\u05E1\u05E4\u05E7\u05D9\u05DD...',
+      '\u05DE\u05E8\u05DB\u05D6 \u05EA\u05D5\u05D1\u05E0\u05D5\u05EA \u05D5\u05DE\u05DE\u05E6\u05D0\u05D9\u05DD...',
+      '\u05DE\u05E1\u05DB\u05DD \u05D0\u05EA \u05EA\u05D5\u05E6\u05D0\u05D5\u05EA \u05D4\u05DE\u05D7\u05E7\u05E8...',
+    ]);
     try {
       const workflow = await runWorkflowToCompletion('/api/market-research', { summary: editorContent, user_goal: goal }, syncMarketResearchWorkflowState);
       if (workflow.status === 'failed') throw new Error(workflow.last_error || 'Failed');
     } catch (e) {
       setMarketResearchError(e.message || '\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05D1\u05D9\u05E6\u05D5\u05E2 \u05DE\u05D7\u05E7\u05E8 \u05E9\u05D5\u05E7');
-    } finally { setIsMarketResearchLoading(false); }
+    } finally { setIsMarketResearchLoading(false); stopLoadingMessages(); }
   };
 
   // ===================== TOC RECOMMENDATIONS =====================
   const handleFetchRecommendations = async () => {
     if (!editorContent || !marketResearchMarkdown || isRecsLoading) return;
     setIsRecsLoading(true); setRecsError(''); setTocRecommendations('');
+    startLoadingMessages([
+      '\u05DE\u05E0\u05EA\u05D7 \u05D0\u05EA \u05DE\u05D1\u05E0\u05D4 \u05D4\u05DE\u05E1\u05DE\u05DA...',
+      '\u05DE\u05E9\u05D5\u05D5\u05D4 \u05DC\u05DE\u05D7\u05E7\u05E8 \u05D4\u05E9\u05D5\u05E7...',
+      '\u05DE\u05D2\u05D1\u05E9 \u05D4\u05DE\u05DC\u05E6\u05D5\u05EA \u05DC\u05E9\u05D9\u05E4\u05D5\u05E8...',
+    ]);
     try {
       const res = await fetch('/api/toc-recommendations', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -274,7 +305,7 @@ function App() {
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || 'Failed');
       setTocRecommendations(data.recommendations || '');
-    } catch (e) { setRecsError(e.message); } finally { setIsRecsLoading(false); }
+    } catch (e) { setRecsError(e.message); } finally { setIsRecsLoading(false); stopLoadingMessages(); }
   };
 
   const handleRecsChatSend = async () => {
@@ -322,6 +353,12 @@ function App() {
     setIsTocLoading(true); setTocError(''); setTocModificationRow(null);
     setTocSectionRows([]); setSectionWorkflowId(''); setCurrentSectionIndex(-1);
     setTocChatMessages([]);
+    startLoadingMessages([
+      '\u05DE\u05E0\u05EA\u05D7 \u05D0\u05EA \u05DE\u05D1\u05E0\u05D4 \u05D4\u05DE\u05E1\u05DE\u05DA \u05D4\u05DE\u05E7\u05D5\u05E8\u05D9...',
+      '\u05DE\u05E9\u05DC\u05D1 \u05EA\u05D5\u05D1\u05E0\u05D5\u05EA \u05DE\u05DE\u05D7\u05E7\u05E8 \u05D4\u05E9\u05D5\u05E7...',
+      '\u05D1\u05D5\u05E0\u05D4 \u05EA\u05D5\u05DB\u05DF \u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD \u05D7\u05D3\u05E9...',
+      '\u05DE\u05E9\u05D5\u05D5\u05D4 \u05D1\u05D9\u05DF \u05DE\u05E7\u05D5\u05E8\u05D9 \u05DC\u05D7\u05D3\u05E9...',
+    ]);
     try {
       const originalTocFromSummary = getOriginalTocTextFromSummaries();
       const res = await fetch('/api/table-of-contents', {
@@ -364,7 +401,7 @@ function App() {
       setTimeout(() => setTocPanelJustUpdated(false), 2500);
     } catch (e) {
       setTocError(e.message || '\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05D9\u05E6\u05D9\u05E8\u05EA \u05EA\u05D5\u05DB\u05DF \u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD');
-    } finally { setIsTocLoading(false); }
+    } finally { setIsTocLoading(false); stopLoadingMessages(); }
   };
 
   // ===================== TOC CHAT =====================
@@ -438,6 +475,13 @@ function App() {
   const handleCreateNextSection = async () => {
     if (currentSectionIndex < 0 || currentSectionIndex >= tocSectionRows.length || isSectionLoading) return;
     setIsSectionLoading(true); setSectionError('');
+    const sectionName = tocSectionRows[currentSectionIndex]?.sectionTitle || '';
+    startLoadingMessages([
+      `\u05DE\u05E0\u05EA\u05D7 \u05D0\u05EA \u05D4\u05E1\u05E2\u05D9\u05E3: ${sectionName}`,
+      '\u05DE\u05E9\u05D5\u05D5\u05D4 \u05DC\u05DE\u05E1\u05DE\u05DA \u05D4\u05DE\u05E7\u05D5\u05E8\u05D9...',
+      '\u05DE\u05E9\u05DC\u05D1 \u05EA\u05D5\u05D1\u05E0\u05D5\u05EA \u05DE\u05DE\u05D7\u05E7\u05E8 \u05D4\u05E9\u05D5\u05E7...',
+      '\u05DB\u05D5\u05EA\u05D1 \u05D0\u05EA \u05D4\u05E1\u05E2\u05D9\u05E3 \u05D4\u05DE\u05E9\u05D5\u05E4\u05E8...',
+    ]);
     try {
       let wfId = sectionWorkflowId;
       if (!wfId) {
@@ -456,7 +500,7 @@ function App() {
       if (workflow.status === 'failed') throw new Error(workflow.last_error || 'Failed');
     } catch (e) {
       setSectionError(e.message || '\u05E9\u05D2\u05D9\u05D0\u05D4 \u05D1\u05D9\u05E6\u05D9\u05E8\u05EA \u05E1\u05E2\u05D9\u05E3');
-    } finally { setIsSectionLoading(false); }
+    } finally { setIsSectionLoading(false); stopLoadingMessages(); }
   };
 
   // ===================== SECTION CHAT =====================
@@ -563,7 +607,7 @@ function App() {
       case 1: return improvementTable.length > 0 && !isImproving;
       case 2: return !!marketResearchMarkdown;
       case 3: return tocSectionRows.length > 0;
-      case 4: return tocSectionRows.length > 0 && tocSectionRows.every(r => r.improvedText);
+      case 4: return tocSectionRows.length > 0 && tocSectionRows.some(r => r.improvedText);
       case 5: return false;
       default: return false;
     }
@@ -595,17 +639,15 @@ function App() {
     const originalLines = (tocModificationRow.originalText || '').split('\n').filter(l => l.trim());
     const newLines = (tocModificationRow.improvedText || '').split('\n').filter(l => l.trim());
     const originalSet = new Set(originalLines.map(l => l.trim()));
-    const newSet = new Set(newLines.map(l => l.trim()));
 
     return React.createElement('div', null,
       React.createElement('div', { className: 'toc-diff-container' },
         React.createElement('div', { className: 'toc-diff-panel' },
           React.createElement('h5', null, '\u05EA\u05D5\u05DB\u05DF \u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD \u05DE\u05E7\u05D5\u05E8\u05D9'),
           originalLines.map((line, i) => {
-            const inNew = newSet.has(line.trim());
             return React.createElement('div', {
               key: `orig-${i}`,
-              className: `toc-diff-line ${inNew ? 'unchanged' : 'removed'}`
+              className: 'toc-diff-line unchanged'
             }, line.trim());
           })
         ),
@@ -790,7 +832,7 @@ function App() {
             },
               React.createElement('div', {
                 style: {
-                  padding: '8px 12px', borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
+                  padding: '16px 24px', borderRadius: msg.role === 'user' ? '12px 12px 2px 12px' : '12px 12px 12px 2px',
                   backgroundColor: msg.role === 'user' ? '#3b82f6' : '#f1f5f9',
                   color: msg.role === 'user' ? '#fff' : '#0f172a', fontSize: '0.88rem', lineHeight: '1.5', whiteSpace: 'pre-wrap'
                 }, dir: 'rtl'
@@ -825,7 +867,7 @@ function App() {
             ))
           ),
 
-          isActiveLoading && React.createElement('div', { style: { alignSelf: 'flex-start', padding: '8px 12px', backgroundColor: '#f1f5f9', borderRadius: '12px', fontSize: '0.85rem', color: '#64748b' } }, '\u05D7\u05D5\u05E9\u05D1...'),
+          isActiveLoading && React.createElement('div', { style: { alignSelf: 'flex-start', padding: '16px 24px', backgroundColor: '#f1f5f9', borderRadius: '12px', fontSize: '0.85rem', color: '#64748b' } }, '\u05D7\u05D5\u05E9\u05D1...'),
           React.createElement('div', { ref: chatEndRef })
         ),
 
@@ -872,24 +914,18 @@ function App() {
             uploadedFiles.length === 0
               ? React.createElement('div', { className: 'empty-state' }, '\u05D8\u05E8\u05DD \u05D4\u05D5\u05E2\u05DC\u05D5 \u05E7\u05D1\u05E6\u05D9\u05DD.')
               : React.createElement('div', null,
-                  uploadedFiles.map(f => React.createElement('div', { key: f, className: 'file-list-item' },
+                  uploadedFiles.map(f => React.createElement('div', { key: f, className: `file-list-item ${selectedFile === f ? 'selected' : ''}` },
                     React.createElement('span', { className: 'file-name' },
-                      React.createElement('span', { className: 'file-icon' }, '\u{1F4C4}'),
+                      React.createElement('span', { className: 'file-icon' }, selectedFile === f ? '\u2705' : '\u{1F4C4}'),
                       f
                     ),
-                    React.createElement('button', { className: 'delete-btn', onClick: () => handleDeleteUpload(f) }, '\u05DE\u05D7\u05D9\u05E7\u05D4')
-                  )),
-                  // -- Select dropdown inline after file list --
-                  React.createElement('div', { style: { marginTop: '16px', paddingTop: '16px', borderTop: '1px solid #e2e8f0' } },
-                    React.createElement('h4', { style: { margin: '0 0 8px' } }, '\u05D1\u05D7\u05D9\u05E8\u05EA \u05E7\u05D5\u05D1\u05E5 \u05DC\u05E2\u05D9\u05D1\u05D5\u05D3'),
-                    React.createElement('select', {
-                      className: 'file-select',
-                      onChange: handleSelectFile, value: selectedFile || ''
-                    },
-                      React.createElement('option', { value: '' }, '\u05D1\u05D7\u05E8\u05D5 \u05E7\u05D5\u05D1\u05E5 \u05E9\u05D4\u05D5\u05E2\u05DC\u05D4...'),
-                      uploadedFiles.map(f => React.createElement('option', { key: f, value: f }, f))
+                    React.createElement('div', { className: 'file-actions' },
+                      selectedFile === f
+                        ? React.createElement('span', { style: { fontSize: '0.82rem', color: '#16a34a', fontWeight: '600' } }, '\u2713 \u05E0\u05D1\u05D7\u05E8')
+                        : React.createElement('button', { className: 'select-btn', onClick: () => handleSelectFile({ target: { value: f } }) }, '\u05D1\u05D7\u05D9\u05E8\u05D4'),
+                      React.createElement('button', { className: 'delete-btn', onClick: () => handleDeleteUpload(f) }, '\u05DE\u05D7\u05D9\u05E7\u05D4')
                     )
-                  )
+                  )),
                 )
           ),
           // -- Upload New File Card --
@@ -979,7 +1015,7 @@ function App() {
           }, isMarketResearchLoading ? '\u05DE\u05D1\u05E6\u05E2 \u05DE\u05D7\u05E7\u05E8...' : '\u05D4\u05EA\u05D7\u05DC\u05EA \u05DE\u05D7\u05E7\u05E8 \u05E9\u05D5\u05E7'),
           isMarketResearchLoading && React.createElement('div', { style: { marginTop: '16px', display: 'flex', alignItems: 'center', gap: '10px' } },
             React.createElement('div', { style: { width: '20px', height: '20px', borderRadius: '50%', border: '3px solid #cbd5e1', borderTopColor: '#10b981', animation: 'spin 1s linear infinite', flexShrink: 0 } }),
-            React.createElement('span', { style: { color: '#475569' } }, '\u05DE\u05D1\u05E6\u05E2 \u05DE\u05D7\u05E7\u05E8 \u05E9\u05D5\u05E7...')
+            React.createElement('span', { style: { color: '#475569' } }, loadingStatus || '\u05DE\u05D1\u05E6\u05E2 \u05DE\u05D7\u05E7\u05E8 \u05E9\u05D5\u05E7...')
           ),
           marketResearchError && React.createElement('div', { style: { marginTop: '12px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', padding: '10px 12px' } }, marketResearchError),
           marketResearchMarkdown && React.createElement('div', { style: { marginTop: '20px' } },
@@ -1014,7 +1050,7 @@ function App() {
             ),
             isRecsLoading && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '12px' } },
               React.createElement('div', { style: { width: '20px', height: '20px', borderRadius: '50%', border: '3px solid #cbd5e1', borderTopColor: '#10b981', animation: 'spin 1s linear infinite', flexShrink: 0 } }),
-              React.createElement('span', { style: { color: '#475569' } }, '\u05DE\u05D9\u05D9\u05E6\u05E8 \u05D4\u05DE\u05DC\u05E6\u05D5\u05EA...')
+              React.createElement('span', { style: { color: '#475569' } }, loadingStatus || '\u05DE\u05D9\u05D9\u05E6\u05E8 \u05D4\u05DE\u05DC\u05E6\u05D5\u05EA...')
             ),
             recsError && React.createElement('div', { style: { border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', padding: '10px 12px', marginBottom: '12px' } }, recsError),
             tocRecommendations && React.createElement('div', {
@@ -1046,7 +1082,7 @@ function App() {
             }, isTocLoading ? '\u05DE\u05D9\u05D9\u05E6\u05E8...' : '\u05D9\u05E6\u05D9\u05E8\u05EA \u05EA\u05D5\u05DB\u05DF \u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD \u05D7\u05D3\u05E9'),
             isTocLoading && React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '10px', marginTop: '12px' } },
               React.createElement('div', { style: { width: '20px', height: '20px', borderRadius: '50%', border: '3px solid #cbd5e1', borderTopColor: '#0f766e', animation: 'spin 1s linear infinite', flexShrink: 0 } }),
-              React.createElement('span', { style: { color: '#475569' } }, '\u05DE\u05D9\u05D9\u05E6\u05E8 \u05EA\u05D5\u05DB\u05DF \u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD...')
+              React.createElement('span', { style: { color: '#475569' } }, loadingStatus || '\u05DE\u05D9\u05D9\u05E6\u05E8 \u05EA\u05D5\u05DB\u05DF \u05E2\u05E0\u05D9\u05D9\u05E0\u05D9\u05DD...')
             ),
             tocError && React.createElement('div', { style: { marginTop: '12px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', padding: '10px 12px' } }, tocError)
           ),
@@ -1092,12 +1128,17 @@ function App() {
                       ),
                       React.createElement('td', null,
                         i === currentSectionIndex && isSectionLoading ?
-                          React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px', color: '#92400e', fontSize: '0.85rem' } },
-                            React.createElement('div', { style: { width: '14px', height: '14px', borderRadius: '50%', border: '2px solid #fcd34d', borderTopColor: '#d97706', animation: 'spin 1s linear infinite', flexShrink: 0 } }),
-                            '\u05DE\u05D9\u05D9\u05E6\u05E8...'
+                          React.createElement('div', { style: { display: 'flex', flexDirection: 'column', gap: '6px', color: '#92400e', fontSize: '0.85rem' } },
+                            React.createElement('div', { style: { display: 'flex', alignItems: 'center', gap: '8px' } },
+                              React.createElement('div', { style: { width: '14px', height: '14px', borderRadius: '50%', border: '2px solid #fcd34d', borderTopColor: '#d97706', animation: 'spin 1s linear infinite', flexShrink: 0 } }),
+                              '\u05DE\u05D9\u05D9\u05E6\u05E8...'
+                            ),
+                            loadingStatus && React.createElement('div', { style: { fontSize: '0.78rem', color: '#78716c' } }, loadingStatus)
                           )
                         : row.improvedText ?
-                          React.createElement('div', { className: 'cell-md', dangerouslySetInnerHTML: { __html: DOMPurify.sanitize(marked.parse(row.improvedText)) } })
+                          (row.originalText ?
+                            React.createElement('div', { className: 'cell-md', style: { lineHeight: '1.7' } }, renderWordDiff(row.originalText, row.improvedText))
+                          : React.createElement('div', { className: 'cell-md', dangerouslySetInnerHTML: { __html: DOMPurify.sanitize(marked.parse(row.improvedText)) } }))
                         : React.createElement('span', { style: { color: '#94a3b8', fontSize: '0.82rem' } }, '\u05DE\u05DE\u05EA\u05D9\u05DF...')
                       ),
                       React.createElement('td', null,

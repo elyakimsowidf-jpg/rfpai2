@@ -82,16 +82,19 @@ You are improving/creating one chapter of a document. Here is the full context:
 {document_summary}
 
 Instructions:
-- Write a complete, improved version of this chapter in professional Markdown.
+- CRITICAL: Keep the original text as your base. Preserve the existing writing style, structure, and formatting.
+- Only make targeted improvements — add missing details, fix inaccuracies, or incorporate relevant market research insights.
+- Do NOT rewrite from scratch. The output should be recognizable as a revision of the original, not a replacement.
+- If the original section has existing content, keep as much of it as possible and only add/modify what is necessary.
 - Start directly with the content — do NOT repeat the chapter title as a heading (it will be prepended automatically).
-{numbering_instruction}- Incorporate relevant insights from the market research where appropriate.
-- Write in the same language as the original text (preserve Hebrew, English, or mixed usage as-is).
-- Be thorough and detailed — this is a formal procurement document.
+{numbering_instruction}- Write in the same language as the original text (preserve Hebrew, English, or mixed usage as-is).
+- IMPORTANT: Output ONLY in the language of the original text. Do not introduce any other languages (no Chinese, Japanese, etc.).
+- If the original section is empty (new section), write thorough professional content based on the market research and document context.
 - Explain changes clearly and justify them.
 
 Return a JSON object with exactly these two keys:
 {{
-  "improved_text": "<full improved chapter content in Markdown>",
+  "improved_text": "<the revised chapter content in Markdown — keep original text as base, only modify what's needed>",
   "explanation": "<brief explanation of the key changes made and why, written in Hebrew>"
 }}
 IMPORTANT: Write the "explanation" field in Hebrew."""
