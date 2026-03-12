@@ -1149,15 +1149,77 @@ function App() {
                 )
               )
             ),
-            React.createElement('div', { style: { marginTop: '16px', textAlign: 'right' } },
-              currentSectionIndex < tocSectionRows.length ?
-                React.createElement('button', {
-                  onClick: handleCreateNextSection, disabled: isSectionLoading,
-                  style: { padding: '10px 18px', backgroundColor: '#7c3aed', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem', opacity: isSectionLoading ? 0.6 : 1 }
-                }, isSectionLoading ? '\u05D9\u05D5\u05E6\u05E8...' : `\u05D9\u05E6\u05D9\u05E8\u05EA: ${tocSectionRows[currentSectionIndex]?.sectionTitle || '\u05D4\u05D1\u05D0'}`)
-              :
-                React.createElement('div', { style: { color: '#16a34a', fontWeight: '600', fontSize: '0.95rem' } }, '\u2713 \u05DB\u05DC \u05D4\u05E1\u05E2\u05D9\u05E4\u05D9\u05DD \u05E0\u05D5\u05E6\u05E8\u05D5'),
-              sectionError && React.createElement('div', { style: { marginTop: '10px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', padding: '10px 12px' } }, sectionError)
+            currentSectionIndex < tocSectionRows.length ? (
+              React.createElement('div', { style: { marginTop: '24px' } },
+                // CTA Card
+                React.createElement('div', {
+                  style: {
+                    padding: '20px',
+                    backgroundColor: isSectionLoading ? '#fefce8' : '#f5f3ff',
+                    border: `1px solid ${isSectionLoading ? '#fde68a' : '#ddd6fe'}`,
+                    borderRadius: '10px',
+                    direction: 'rtl',
+                    textAlign: 'right',
+                    transition: 'background-color 0.2s, border-color 0.2s'
+                  }
+                },
+                  // Progress label
+                  React.createElement('div', {
+                    style: { fontSize: '0.82rem', color: '#78716c', marginBottom: '8px', fontWeight: '500' }
+                  }, `סעיף ${currentSectionIndex + 1} מתוך ${tocSectionRows.length}`),
+
+                  // Section title
+                  React.createElement('div', {
+                    style: { fontSize: '1rem', fontWeight: '600', color: '#0f172a', marginBottom: '12px' }
+                  }, `כתיבה מחדש של: "${tocSectionRows[currentSectionIndex]?.sectionTitle || 'סעיף'}"`),
+
+                  // Status/info text
+                  React.createElement('div', {
+                    style: { fontSize: '0.9rem', color: '#475569', marginBottom: '16px', lineHeight: '1.5' }
+                  }, isSectionLoading ? loadingStatus || 'מעבד את הסעיף...' : 'לחצ לראות את השיפורים והסברים בטבלה להלן'),
+
+                  // Button
+                  React.createElement('button', {
+                    onClick: handleCreateNextSection,
+                    disabled: isSectionLoading,
+                    style: {
+                      padding: '12px 28px',
+                      backgroundColor: '#7c3aed',
+                      color: '#fff',
+                      border: 'none',
+                      borderRadius: '6px',
+                      cursor: isSectionLoading ? 'not-allowed' : 'pointer',
+                      fontWeight: '600',
+                      fontSize: '0.95rem',
+                      opacity: isSectionLoading ? 0.7 : 1,
+                      transition: 'opacity 0.2s'
+                    }
+                  }, isSectionLoading ? '\u05D9\u05D5\u05E6\u05E8...' : '\u05DB\u05EA\u05D5\u05D1 \u05DE\u05D7\u05D3\u05E9 \u05D0\u05EA \u05D4\u05E1\u05E2\u05D9\u05E3')
+                )
+              ),
+
+              // Error display
+              sectionError && React.createElement('div', {
+                style: { marginTop: '12px', border: '1px solid #fecaca', backgroundColor: '#fef2f2', color: '#991b1b', borderRadius: '8px', padding: '10px 12px', fontSize: '0.9rem' }
+              }, sectionError)
+            )
+            : (
+              React.createElement('div', { style: { marginTop: '24px' } },
+                React.createElement('div', {
+                  style: {
+                    padding: '20px',
+                    backgroundColor: '#ecfdf5',
+                    border: '1px solid #a7f3d0',
+                    borderRadius: '10px',
+                    direction: 'rtl',
+                    textAlign: 'right'
+                  }
+                },
+                  React.createElement('div', { style: { fontSize: '1rem', fontWeight: '600', color: '#047857', display: 'flex', alignItems: 'center', gap: '8px' } },
+                    '\u2713 \u05DB\u05DC \u05D4\u05E1\u05E2\u05D9\u05E4\u05D9\u05DD \u05E0\u05D5\u05E6\u05E8\u05D5!'
+                  )
+                )
+              )
             ),
             selectedRowIndex >= 0 && tocSectionRows[selectedRowIndex]?.originalText && tocSectionRows[selectedRowIndex]?.improvedText && React.createElement('div', { style: { marginTop: '20px', padding: '16px', border: '1px solid #e2e8f0', borderRadius: '8px', backgroundColor: '#f8fafc' } },
               React.createElement('h5', { style: { margin: '0 0 10px', color: '#0f172a' } }, '\u05E9\u05D9\u05E0\u05D5\u05D9\u05D9\u05DD \u05D1\u05E8\u05DE\u05EA \u05DE\u05D9\u05DC\u05D4'),
